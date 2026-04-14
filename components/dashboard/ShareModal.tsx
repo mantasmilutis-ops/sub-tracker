@@ -229,7 +229,7 @@ export function ShareModal({ dataUrl, totalMonthly, currency, onClose }: ShareMo
   const toastTimer = useRef<ReturnType<typeof setTimeout>>()
 
   const variant = getVariant(totalMonthly, fmt)
-  const shareUrl = typeof window !== 'undefined' ? window.location.origin : 'https://subtracker.app'
+  const shareUrl = typeof window !== 'undefined' ? window.location.origin : 'https://subtracker.to'
 
   function showToast(msg: string) {
     clearTimeout(toastTimer.current)

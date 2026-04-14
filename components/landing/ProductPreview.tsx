@@ -29,7 +29,7 @@ export default function ProductPreview() {
               <div className="w-3 h-3 rounded-full bg-green-400" />
             </div>
             <div className="flex-1 bg-slate-700 rounded-md px-3 py-1 text-xs text-slate-400 font-mono">
-              subtracker.app/dashboard
+              subtracker.to/dashboard
             </div>
           </div>
 

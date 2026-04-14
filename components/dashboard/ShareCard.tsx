@@ -187,7 +187,7 @@ export const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
           color: 'rgba(165,180,252,0.6)',
           letterSpacing: '0.02em',
         }}>
-          subtracker.app
+          subtracker.to
         </p>
       </div>
     </div>
