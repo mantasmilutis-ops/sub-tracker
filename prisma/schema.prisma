@@ -1,0 +1,46 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  password           String?
+  name               String?
+  emailVerified      Boolean             @default(true)
+  timezone           String?
+  createdAt          DateTime            @default(now())
+  subscriptions      Subscription[]
+  verificationTokens VerificationToken[]
+}
+
+model Subscription {
+  id           String   @id @default(cuid())
+  name         String
+  price        Float
+  billingCycle String
+  category     String?
+  nextBilling  DateTime
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model VerificationToken {
+  id      String   @id @default(cuid())
+  token   String   @unique
+  userId  String
+  expires DateTime
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
