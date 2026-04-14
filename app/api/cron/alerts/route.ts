@@ -144,28 +144,21 @@ export async function GET(req: Request) {
       tomorrowByUser.get(sub.userId)!.subs.push(sub)
     }
 
-    // In dev/test, Resend sandbox only allows sending to the verified owner email.
-    const DEV_RECIPIENT = 'mantasmilutis@gmail.com'
-
     let sentToday = 0
     let sentTomorrow = 0
 
-    if (todayByUser.size > 0) {
-      const allTodaySubs: AlertSub[] = Array.from(todayByUser.values())
-        .flatMap(b => b.subs)
-        .map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
-      console.log('Sending TODAY alert —', allTodaySubs.length, 'sub(s)')
-      const { error } = await sendTodayAlert(DEV_RECIPIENT, allTodaySubs)
+    for (const { email, subs } of todayByUser.values()) {
+      const alertSubs: AlertSub[] = subs.map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
+      console.log('Sending TODAY alert to', email, '—', alertSubs.length, 'sub(s)')
+      const { error } = await sendTodayAlert(email, alertSubs)
       if (error) console.error('Failed today alert:', error)
       else sentToday++
     }
 
-    if (tomorrowByUser.size > 0) {
-      const allTomorrowSubs: AlertSub[] = Array.from(tomorrowByUser.values())
-        .flatMap(b => b.subs)
-        .map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
-      console.log('Sending TOMORROW alert —', allTomorrowSubs.length, 'sub(s)')
-      const { error } = await sendTomorrowAlert(DEV_RECIPIENT, allTomorrowSubs)
+    for (const { email, subs } of tomorrowByUser.values()) {
+      const alertSubs: AlertSub[] = subs.map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
+      console.log('Sending TOMORROW alert to', email, '—', alertSubs.length, 'sub(s)')
+      const { error } = await sendTomorrowAlert(email, alertSubs)
       if (error) console.error('Failed tomorrow alert:', error)
       else sentTomorrow++
     }
@@ -195,41 +188,52 @@ export async function GET(req: Request) {
     in30Days.setUTCDate(in30Days.getUTCDate() + 30)
     in30Days.setUTCHours(23, 59, 59, 999)
 
-    const [totalSubscriptions, weekSubsRaw, upcomingCount] = await Promise.all([
-      prisma.subscription.count(),
-      prisma.subscription.findMany({
-        where: { nextBilling: { gte: now, lte: in7Days } },
-        orderBy: { nextBilling: 'asc' },
-      }),
-      prisma.subscription.count({ where: { nextBilling: { gte: in8Days, lte: in30Days } } }),
-    ])
-
-    const expiringThisWeekCount = weekSubsRaw.length
-    const upcomingSubs: AlertSub[] = weekSubsRaw.map(s => ({
-      name: s.name,
-      price: s.price,
-      billingCycle: s.billingCycle,
-      nextBilling: s.nextBilling,
-    }))
-
-    const DEV_RECIPIENT = 'mantasmilutis@gmail.com'
-    console.log('Sending WEEKLY summary to:', DEV_RECIPIENT)
-
-    const { error } = await sendWeeklySummaryEmail(DEV_RECIPIENT, {
-      totalSubscriptions,
-      expiringThisWeek: expiringThisWeekCount,
-      upcoming: upcomingCount,
-      upcomingSubs,
+    const weekSubsRaw = await prisma.subscription.findMany({
+      where: { nextBilling: { gte: now, lte: in7Days } },
+      orderBy: { nextBilling: 'asc' },
+      include: { user: { select: { email: true } } },
     })
 
-    if (error) console.error('Failed weekly summary:', error)
+    // Group this week's subs by user
+    const weekByUser = new Map<string, { email: string; subs: typeof weekSubsRaw }>()
+    for (const sub of weekSubsRaw) {
+      if (!weekByUser.has(sub.userId))
+        weekByUser.set(sub.userId, { email: sub.user.email, subs: [] })
+      weekByUser.get(sub.userId)!.subs.push(sub)
+    }
+
+    let sentWeekly = 0
+
+    for (const [userId, { email, subs }] of weekByUser) {
+      const [totalSubscriptions, upcomingCount] = await Promise.all([
+        prisma.subscription.count({ where: { userId } }),
+        prisma.subscription.count({ where: { userId, nextBilling: { gte: in8Days, lte: in30Days } } }),
+      ])
+
+      const upcomingSubs: AlertSub[] = subs.map(s => ({
+        name: s.name,
+        price: s.price,
+        billingCycle: s.billingCycle,
+        nextBilling: s.nextBilling,
+      }))
+
+      console.log('Sending WEEKLY summary to:', email)
+
+      const { error } = await sendWeeklySummaryEmail(email, {
+        totalSubscriptions,
+        expiringThisWeek: subs.length,
+        upcoming: upcomingCount,
+        upcomingSubs,
+      })
+
+      if (error) console.error('Failed weekly summary:', error)
+      else sentWeekly++
+    }
 
     return NextResponse.json({
       type: 'weekly',
-      totalSubscriptions,
-      expiringThisWeek: expiringThisWeekCount,
-      upcoming: upcomingCount,
-      sent: !error,
+      usersNotified: sentWeekly,
+      sent: sentWeekly > 0,
     })
   }
 
