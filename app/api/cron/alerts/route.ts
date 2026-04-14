@@ -147,7 +147,7 @@ export async function GET(req: Request) {
     let sentToday = 0
     let sentTomorrow = 0
 
-    for (const { email, subs } of todayByUser.values()) {
+    for (const { email, subs } of Array.from(todayByUser.values())) {
       const alertSubs: AlertSub[] = subs.map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
       console.log('Sending TODAY alert to', email, '—', alertSubs.length, 'sub(s)')
       const { error } = await sendTodayAlert(email, alertSubs)
@@ -155,7 +155,7 @@ export async function GET(req: Request) {
       else sentToday++
     }
 
-    for (const { email, subs } of tomorrowByUser.values()) {
+    for (const { email, subs } of Array.from(tomorrowByUser.values())) {
       const alertSubs: AlertSub[] = subs.map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
       console.log('Sending TOMORROW alert to', email, '—', alertSubs.length, 'sub(s)')
       const { error } = await sendTomorrowAlert(email, alertSubs)
@@ -204,7 +204,7 @@ export async function GET(req: Request) {
 
     let sentWeekly = 0
 
-    for (const [userId, { email, subs }] of weekByUser) {
+    for (const [userId, { email, subs }] of Array.from(weekByUser)) {
       const [totalSubscriptions, upcomingCount] = await Promise.all([
         prisma.subscription.count({ where: { userId } }),
         prisma.subscription.count({ where: { userId, nextBilling: { gte: in8Days, lte: in30Days } } }),
