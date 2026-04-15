@@ -29,8 +29,11 @@ export async function DELETE(
 
   const userEmail = session.user.email
   if (userEmail) {
-    sendSubscriptionRemovedEmail(userEmail, { name: subscription.name })
-      .catch((err) => console.error('sendSubscriptionRemovedEmail failed:', err))
+    try {
+      await sendSubscriptionRemovedEmail(userEmail, { name: subscription.name })
+    } catch (err) {
+      console.error('sendSubscriptionRemovedEmail failed:', err)
+    }
   }
 
   return NextResponse.json({ message: 'Deleted' })

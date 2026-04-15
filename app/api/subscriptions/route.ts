@@ -47,11 +47,15 @@ export async function POST(req: Request) {
 
     const userEmail = session.user.email
     if (userEmail) {
-      sendSubscriptionAddedEmail(userEmail, {
-        name: subscription.name,
-        price: subscription.price,
-        billingCycle: subscription.billingCycle,
-      }).catch((err) => console.error('sendSubscriptionAddedEmail failed:', err))
+      try {
+        await sendSubscriptionAddedEmail(userEmail, {
+          name: subscription.name,
+          price: subscription.price,
+          billingCycle: subscription.billingCycle,
+        })
+      } catch (err) {
+        console.error('sendSubscriptionAddedEmail failed:', err)
+      }
     }
 
     return NextResponse.json(subscription, { status: 201 })
