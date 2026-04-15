@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     // Covers: custom service (no logo sent), failed lookup, old client payloads.
     const logoUrl: string = rawLogoUrl || '/logos/subtracker.svg'
 
-    console.log('[POST /api/subscriptions] incoming:', { name, rawLogoUrl, resolvedLogoUrl: logoUrl })
+    console.log('[add] started —', name, '| logoUrl:', logoUrl)
 
     if (!name || !price || !billingCycle || !nextBilling) {
       return NextResponse.json(
@@ -51,9 +51,11 @@ export async function POST(req: Request) {
         logoUrl,
       },
     })
+    console.log('[add] DB write success — id:', subscription.id)
 
     const userEmail = session.user.email
     if (userEmail) {
+      console.log('[add] email send started — to:', userEmail)
       try {
         await sendSubscriptionAddedEmail(userEmail, {
           name: subscription.name,
@@ -61,14 +63,15 @@ export async function POST(req: Request) {
           billingCycle: subscription.billingCycle,
           currency: currency ?? 'EUR',
         })
+        console.log('[add] email send success')
       } catch (err) {
-        console.error('sendSubscriptionAddedEmail failed:', err)
+        console.error('[add] email send FAILED:', err)
       }
     }
 
     return NextResponse.json(subscription, { status: 201 })
   } catch (err) {
-    console.error('[POST /api/subscriptions] Prisma create failed:', err)
+    console.error('[add] unhandled error:', err)
     return NextResponse.json(
       { error: 'Failed to create subscription' },
       { status: 500 }

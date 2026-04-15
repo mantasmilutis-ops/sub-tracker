@@ -26,13 +26,17 @@ function DirectLogo({
   if (errored) {
     return (
       <div
-        className={`flex items-center justify-center rounded-xl text-sm font-bold flex-shrink-0 bg-slate-100 text-slate-500 ${fallbackClassName} ${className}`}
+        className={`flex items-center justify-center rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0 ${className}`}
         style={{ width: size, height: size }}
       >
-        {initial}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logos/subtracker.png?v=1" alt="logo" width={imgSize} height={imgSize} className="object-contain" style={{ width: imgSize, height: imgSize }} />
       </div>
     )
   }
+
+  // Enforce HTTPS — Safari can refuse mixed-content images silently
+  const safeSrc = src.startsWith('http://') ? src.replace('http://', 'https://') : src
 
   return (
     <div
@@ -41,7 +45,7 @@ function DirectLogo({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={`${safeSrc}?v=1`}
         alt={`${name} logo`}
         width={imgSize}
         height={imgSize}
@@ -212,14 +216,15 @@ export function ServiceLogo({ name, size = 40, className = '', fallbackClassName
     }
   }
 
-  // ── Letter avatar (terminal fallback) ───────────────────────────────────────
+  // ── PNG fallback (terminal — both remote sources failed) ────────────────────
   if (tier === 'letter') {
     return (
       <div
-        className={`flex items-center justify-center rounded-xl text-sm font-bold flex-shrink-0 bg-slate-100 text-slate-500 ${fallbackClassName} ${className}`}
+        className={`flex items-center justify-center rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0 ${className}`}
         style={{ width: size, height: size }}
       >
-        {initial}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logos/subtracker.png?v=1" alt="logo" width={imgSize} height={imgSize} className="object-contain" style={{ width: imgSize, height: imgSize }} />
       </div>
     )
   }
@@ -227,8 +232,8 @@ export function ServiceLogo({ name, size = 40, className = '', fallbackClassName
   // ── Remote logo ─────────────────────────────────────────────────────────────
   const logoUrl =
     tier === 'clearbit'
-      ? `https://logo.clearbit.com/${domain}`
-      : `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+      ? `https://logo.clearbit.com/${domain}?v=1`
+      : `https://www.google.com/s2/favicons?domain=${domain}&sz=128&v=1`
 
   if (process.env.NODE_ENV === 'development') {
     console.log(
@@ -248,11 +253,13 @@ export function ServiceLogo({ name, size = 40, className = '', fallbackClassName
         through instead of a broken-image icon — works even if onError
         doesn't fire (a known quirk in some mobile Chrome builds).
       */}
+      {/* PNG fallback behind the img — visible if img never renders (mobile/Safari quirk) */}
       <div
-        className="absolute inset-0 flex items-center justify-center text-sm font-bold bg-slate-100 text-slate-500"
+        className="absolute inset-0 flex items-center justify-center bg-white"
         aria-hidden="true"
       >
-        {initial}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logos/subtracker.png?v=1" alt="" width={imgSize} height={imgSize} className="object-contain" style={{ width: imgSize, height: imgSize }} />
       </div>
       {/*
         key={logoUrl}: forces React to unmount and remount a fresh <img> DOM

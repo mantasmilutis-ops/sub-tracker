@@ -25,16 +25,26 @@ export async function DELETE(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  await prisma.subscription.delete({ where: { id: params.id } })
+  try {
+    console.log('[remove] started — id:', params.id)
 
-  const userEmail = session.user.email
-  if (userEmail) {
-    try {
-      await sendSubscriptionRemovedEmail(userEmail, { name: subscription.name })
-    } catch (err) {
-      console.error('sendSubscriptionRemovedEmail failed:', err)
+    await prisma.subscription.delete({ where: { id: params.id } })
+    console.log('[remove] DB delete success —', subscription.name)
+
+    const userEmail = session.user.email
+    if (userEmail) {
+      console.log('[remove] email send started — to:', userEmail)
+      try {
+        await sendSubscriptionRemovedEmail(userEmail, { name: subscription.name })
+        console.log('[remove] email send success')
+      } catch (err) {
+        console.error('[remove] email send FAILED:', err)
+      }
     }
-  }
 
-  return NextResponse.json({ message: 'Deleted' })
+    return NextResponse.json({ message: 'Deleted' })
+  } catch (err) {
+    console.error('[remove] unhandled error:', err)
+    return NextResponse.json({ error: 'Failed to delete subscription' }, { status: 500 })
+  }
 }
