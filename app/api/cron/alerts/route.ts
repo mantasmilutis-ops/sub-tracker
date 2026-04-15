@@ -138,6 +138,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type') ?? 'daily'
 
+  console.log('[DEBUG] cron fired — type:', type, '| UTC time:', new Date().toISOString(), '| SEND_HOUR:', SEND_HOUR)
+
   // ── Daily: today + tomorrow reminders ─────────────────────────────────────
   if (type === 'daily') {
     // Two separate queries — one per day — so grouping is trivial
@@ -167,19 +169,26 @@ export async function GET(req: Request) {
       tomorrowByUser.get(sub.userId)!.subs.push(sub)
     }
 
+    console.log('[DEBUG] TOTAL USERS with today subs:', todayByUser.size, '| tomorrow subs:', tomorrowByUser.size)
+
     let sentToday = 0
     let sentTomorrow = 0
 
     for (const [userId, { email, timezone, subs }] of Array.from(todayByUser)) {
-      if (getLocalHour(timezone) !== SEND_HOUR) continue
+      const localHour = getLocalHour(timezone)
       const localDate = getLocalDateStr(timezone)
+      console.log('[DEBUG] USER (today):', userId, '| timezone:', timezone, '| localHour:', localHour, '| localDate:', localDate, '| SEND_HOUR:', SEND_HOUR)
+      console.log('[DEBUG] SUBS FOUND (today):', subs.length)
+      // HOUR CHECK DISABLED FOR DEBUG
+      console.log('[DEBUG] SKIPPING HOUR CHECK FOR DEBUG')
+      // if (getLocalHour(timezone) !== SEND_HOUR) continue
       const alreadySent = await prisma.alertLog.findUnique({
         where: { userId_type_localDate: { userId, type: 'today', localDate } },
       })
-      if (alreadySent) continue
+      if (alreadySent) { console.log('[DEBUG] already sent today — skipping', userId); continue }
 
       const alertSubs: AlertSub[] = subs.map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
-      console.log('Sending TODAY alert to', email, '—', alertSubs.length, 'sub(s)')
+      console.log('[DEBUG] SENDING EMAIL (today):', userId, email)
       const { error } = await sendTodayAlert(email, alertSubs)
       if (error) {
         console.error('Failed today alert:', error)
@@ -196,15 +205,20 @@ export async function GET(req: Request) {
     }
 
     for (const [userId, { email, timezone, subs }] of Array.from(tomorrowByUser)) {
-      if (getLocalHour(timezone) !== SEND_HOUR) continue
+      const localHour = getLocalHour(timezone)
       const localDate = getLocalDateStr(timezone)
+      console.log('[DEBUG] USER (tomorrow):', userId, '| timezone:', timezone, '| localHour:', localHour, '| localDate:', localDate, '| SEND_HOUR:', SEND_HOUR)
+      console.log('[DEBUG] SUBS FOUND (tomorrow):', subs.length)
+      // HOUR CHECK DISABLED FOR DEBUG
+      console.log('[DEBUG] SKIPPING HOUR CHECK FOR DEBUG')
+      // if (getLocalHour(timezone) !== SEND_HOUR) continue
       const alreadySent = await prisma.alertLog.findUnique({
         where: { userId_type_localDate: { userId, type: 'tomorrow', localDate } },
       })
-      if (alreadySent) continue
+      if (alreadySent) { console.log('[DEBUG] already sent tomorrow — skipping', userId); continue }
 
       const alertSubs: AlertSub[] = subs.map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
-      console.log('Sending TOMORROW alert to', email, '—', alertSubs.length, 'sub(s)')
+      console.log('[DEBUG] SENDING EMAIL (tomorrow):', userId, email)
       const { error } = await sendTomorrowAlert(email, alertSubs)
       if (error) {
         console.error('Failed tomorrow alert:', error)
@@ -259,16 +273,24 @@ export async function GET(req: Request) {
       weekByUser.get(sub.userId)!.subs.push(sub)
     }
 
+    console.log('[DEBUG] TOTAL USERS with weekly subs:', weekByUser.size)
+
     let sentWeekly = 0
 
     for (const [userId, { email, timezone, subs }] of Array.from(weekByUser)) {
-      if (getLocalHour(timezone) !== SEND_HOUR) continue
-      if (getLocalDayOfWeek(timezone) !== 1) continue // Monday only
+      const localHour = getLocalHour(timezone)
+      const localDow = getLocalDayOfWeek(timezone)
       const localDate = getLocalDateStr(timezone)
+      console.log('[DEBUG] USER (weekly):', userId, '| timezone:', timezone, '| localHour:', localHour, '| localDow:', localDow, '| localDate:', localDate)
+      console.log('[DEBUG] SUBS FOUND (weekly):', subs.length)
+      // HOUR CHECK DISABLED FOR DEBUG
+      console.log('[DEBUG] SKIPPING HOUR CHECK FOR DEBUG')
+      // if (getLocalHour(timezone) !== SEND_HOUR) continue
+      // if (getLocalDayOfWeek(timezone) !== 1) continue // Monday only
       const alreadySent = await prisma.alertLog.findUnique({
         where: { userId_type_localDate: { userId, type: 'weekly', localDate } },
       })
-      if (alreadySent) continue
+      if (alreadySent) { console.log('[DEBUG] already sent weekly — skipping', userId); continue }
 
       const [totalSubscriptions, upcomingCount] = await Promise.all([
         prisma.subscription.count({ where: { userId } }),
@@ -282,7 +304,7 @@ export async function GET(req: Request) {
         nextBilling: s.nextBilling,
       }))
 
-      console.log('Sending WEEKLY summary to:', email)
+      console.log('[DEBUG] SENDING EMAIL (weekly):', userId, email)
 
       const { error } = await sendWeeklySummaryEmail(email, {
         totalSubscriptions,
