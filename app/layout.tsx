@@ -4,8 +4,21 @@ import './globals.css'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'SubTracker — Track Your Subscriptions',
-  description: 'Know exactly what you pay every month. Track all your subscriptions in one place.',
+  title: 'SubTracker – Track your subscriptions',
+  description: 'Stop wasting money on forgotten subscriptions.',
+  metadataBase: new URL('https://subtracker.to'),
+  openGraph: {
+    title: 'SubTracker – Track your subscriptions',
+    description: 'Stop wasting money on forgotten subscriptions.',
+    url: 'https://subtracker.to',
+    siteName: 'SubTracker',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SubTracker – Track your subscriptions',
+    description: 'Stop wasting money on forgotten subscriptions.',
+  },
 }
 
 export default function RootLayout({
