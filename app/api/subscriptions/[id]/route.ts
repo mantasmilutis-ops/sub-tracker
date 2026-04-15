@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendSubscriptionRemovedEmail } from '@/lib/email'
 
 export async function DELETE(
   _req: Request,
@@ -25,6 +26,12 @@ export async function DELETE(
   }
 
   await prisma.subscription.delete({ where: { id: params.id } })
+
+  const userEmail = session.user.email
+  if (userEmail) {
+    sendSubscriptionRemovedEmail(userEmail, { name: subscription.name })
+      .catch((err) => console.error('sendSubscriptionRemovedEmail failed:', err))
+  }
 
   return NextResponse.json({ message: 'Deleted' })
 }

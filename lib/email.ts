@@ -435,3 +435,49 @@ export async function sendVerificationEmail(to: string, token: string) {
     </p>
   `))
 }
+
+// ─── Subscription transactional emails ───────────────────────────────────────
+
+export async function sendSubscriptionAddedEmail(
+  to: string,
+  sub: { name: string; price: number; billingCycle: string },
+) {
+  const cycle = sub.billingCycle === 'yearly' ? 'year' : 'month'
+  const html = wrap(`
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;text-align:center;">Subscription added</h1>
+    <p style="margin:0 0 28px;font-size:14px;color:#64748b;text-align:center;">
+      <strong style="color:#1e293b;">${sub.name}</strong> has been added to your SubTracker.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+      <tr style="background:#f8fafc;">
+        <td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:500;">Subscription</td>
+        <td style="padding:12px 16px;font-size:13px;color:#0f172a;font-weight:600;text-align:right;">${sub.name}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:500;">Price</td>
+        <td style="padding:12px 16px;font-size:13px;color:#0f172a;font-weight:600;text-align:right;">€${sub.price.toFixed(2)} / ${cycle}</td>
+      </tr>
+      <tr style="background:#f8fafc;">
+        <td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:500;">Billing cycle</td>
+        <td style="padding:12px 16px;font-size:13px;color:#0f172a;font-weight:600;text-align:right;">${sub.billingCycle.charAt(0).toUpperCase() + sub.billingCycle.slice(1)}</td>
+      </tr>
+    </table>
+    ${ctaButton('View Dashboard', dashboardUrl())}
+  `)
+  return sendEmail(to, `"${sub.name}" added to SubTracker`, html)
+}
+
+export async function sendSubscriptionRemovedEmail(
+  to: string,
+  sub: { name: string },
+) {
+  const html = wrap(`
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;text-align:center;">Subscription removed</h1>
+    <p style="margin:0 0 28px;font-size:14px;color:#64748b;text-align:center;">
+      <strong style="color:#1e293b;">${sub.name}</strong> has been removed from your SubTracker
+      and will no longer be tracked.
+    </p>
+    ${ctaButton('View Dashboard', dashboardUrl())}
+  `)
+  return sendEmail(to, `"${sub.name}" removed from SubTracker`, html)
+}

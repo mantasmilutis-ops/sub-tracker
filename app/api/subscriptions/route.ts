@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendSubscriptionAddedEmail } from '@/lib/email'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -43,6 +44,15 @@ export async function POST(req: Request) {
         userId: session.user.id,
       },
     })
+
+    const userEmail = session.user.email
+    if (userEmail) {
+      sendSubscriptionAddedEmail(userEmail, {
+        name: subscription.name,
+        price: subscription.price,
+        billingCycle: subscription.billingCycle,
+      }).catch((err) => console.error('sendSubscriptionAddedEmail failed:', err))
+    }
 
     return NextResponse.json(subscription, { status: 201 })
   } catch {
