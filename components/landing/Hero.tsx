@@ -27,7 +27,7 @@ export default function Hero() {
             className="bg-clip-text text-transparent"
             style={{ backgroundImage: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
           >
-            forgotten subscriptions!
+            forgotten subscriptions!!! 🚀
           </span>
         </h1>
 
