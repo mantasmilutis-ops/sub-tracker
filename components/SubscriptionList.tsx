@@ -2,11 +2,43 @@
 
 import { useState, useEffect } from 'react'
 import { Subscription } from './DashboardClient'
-import { ServiceLogo } from './ServiceLogo'
 import { getCancelUrl, getFallbackSearchUrl } from '@/lib/cancel-catalog'
 import { useCurrency } from './CurrencyContext'
 import { formatCurrency } from '@/lib/currency'
 import { getDaysUntil, formatBillingDate } from '@/lib/date'
+
+// ─── Subscription logo ────────────────────────────────────────────────────────
+// Renders the stored logoUrl directly — no external lookup at render time,
+// so logos are consistent across all browsers and sessions.
+
+function SubscriptionLogo({ logoUrl, size, className }: {
+  logoUrl: string
+  size: number
+  className?: string
+}) {
+  const [errored, setErrored] = useState(false)
+  const imgSize = Math.round(size * 0.72)
+  const src = errored ? '/logos/subtracker.png' : logoUrl
+
+  return (
+    <div
+      className={`flex items-center justify-center rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0 ${className ?? ''}`}
+      style={{ width: size, height: size }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        key={src}
+        src={src}
+        alt=""
+        width={imgSize}
+        height={imgSize}
+        onError={errored ? undefined : () => setErrored(true)}
+        className="object-contain"
+        style={{ width: imgSize, height: imgSize }}
+      />
+    </div>
+  )
+}
 
 // ─── Cancel modal ─────────────────────────────────────────────────────────────
 
@@ -146,11 +178,10 @@ export function SubscriptionList({ subscriptions, onDelete, deletingId, getMonth
               }`}
             >
               {/* Service logo */}
-              <ServiceLogo
-                name={sub.name}
+              <SubscriptionLogo
+                logoUrl={sub.logoUrl}
                 size={40}
                 className={isTopExpensive ? 'ring-2 ring-indigo-200' : ''}
-                fallbackClassName={isTopExpensive ? 'bg-indigo-100 text-indigo-600' : ''}
               />
 
               {/* Info */}

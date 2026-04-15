@@ -45,6 +45,7 @@ export function AddSubscriptionForm({ onAdded, onCancel }: Props) {
   // When true, typing a new service name is allowed to overwrite the value.
   const [categoryAutoDetected, setCategoryAutoDetected] = useState(false)
   const [priceAutoFilled, setPriceAutoFilled] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
 
   // Autocomplete state
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -92,10 +93,18 @@ export function AddSubscriptionForm({ onAdded, onCancel }: Props) {
         setPrice(suggested)
         setPriceAutoFilled(true)
       }
+      // Logo — set once; don't overwrite if already set by selectSuggestion
+      if (!logoUrl) {
+        setLogoUrl(`https://www.google.com/s2/favicons?domain=${match.domain}&sz=128`)
+      }
     } else if (!value.trim()) {
       // Field cleared — reset auto-fills
       if (categoryAutoDetected) { setCategory(''); setCategoryAutoDetected(false) }
       if (priceAutoFilled) { setPrice(''); setPriceAutoFilled(false) }
+      setLogoUrl(null)
+    } else {
+      // Non-empty but no exact match — user is typing a custom name
+      setLogoUrl(null)
     }
   }
 
@@ -138,6 +147,9 @@ export function AddSubscriptionForm({ onAdded, onCancel }: Props) {
       setPriceAutoFilled(true)
     }
 
+    // Logo — always use the catalog domain, overwrite any prior value
+    setLogoUrl(`https://www.google.com/s2/favicons?domain=${entry.domain}&sz=128`)
+
     nameInputRef.current?.focus()
   }
 
@@ -165,6 +177,7 @@ export function AddSubscriptionForm({ onAdded, onCancel }: Props) {
         billingCycle,
         category: category || null,
         nextBilling,
+        logoUrl: logoUrl ?? null,
       }),
     })
 

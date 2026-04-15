@@ -57,6 +57,7 @@ export type Subscription = {
   billingCycle: string
   category: string | null
   nextBilling: string
+  logoUrl: string
   createdAt: string
 }
 
