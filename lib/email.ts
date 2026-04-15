@@ -30,6 +30,89 @@ function fmtPrice(price: number): string {
   return `€${price.toFixed(2)}`
 }
 
+// ─── Subscription logos ───────────────────────────────────────────────────────
+
+const LOGO_DOMAINS: Record<string, string> = {
+  'netflix': 'netflix.com',
+  'spotify': 'spotify.com',
+  'youtube': 'youtube.com',
+  'youtube premium': 'youtube.com',
+  'youtube music': 'youtube.com',
+  'disney': 'disneyplus.com',
+  'disney+': 'disneyplus.com',
+  'hbo': 'hbo.com',
+  'hbo max': 'max.com',
+  'max': 'max.com',
+  'apple': 'apple.com',
+  'apple tv': 'apple.com',
+  'apple tv+': 'apple.com',
+  'apple music': 'apple.com',
+  'apple one': 'apple.com',
+  'icloud': 'icloud.com',
+  'amazon': 'amazon.com',
+  'amazon prime': 'amazon.com',
+  'prime video': 'amazon.com',
+  'chatgpt': 'openai.com',
+  'openai': 'openai.com',
+  'claude': 'anthropic.com',
+  'anthropic': 'anthropic.com',
+  'github': 'github.com',
+  'github copilot': 'github.com',
+  'notion': 'notion.so',
+  'slack': 'slack.com',
+  'adobe': 'adobe.com',
+  'microsoft': 'microsoft.com',
+  'office 365': 'microsoft.com',
+  'microsoft 365': 'microsoft.com',
+  'google': 'google.com',
+  'google one': 'google.com',
+  'twitch': 'twitch.tv',
+  'dropbox': 'dropbox.com',
+  'figma': 'figma.com',
+  'linear': 'linear.app',
+  'vercel': 'vercel.com',
+  'cursor': 'cursor.sh',
+  'digitalocean': 'digitalocean.com',
+  'heroku': 'heroku.com',
+}
+
+function getSubscriptionLogoUrl(name: string): string | null {
+  const domain = LOGO_DOMAINS[name.toLowerCase().trim()]
+  return domain ? `https://logo.clearbit.com/${domain}` : null
+}
+
+function stringToColor(str: string): string {
+  const palette = ['#6366f1','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#3b82f6','#06b6d4']
+  let hash = 0
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  return palette[Math.abs(hash) % palette.length]
+}
+
+/** 48px centered logo block for single-subscription emails. */
+function subscriptionLogo(name: string): string {
+  const url = getSubscriptionLogoUrl(name)
+  const letter = name.charAt(0).toUpperCase()
+  if (url) {
+    return `
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+    <tr><td align="center">
+      <img src="${url}" width="48" height="48" alt="${name}"
+           style="border-radius:10px;display:block;border:1px solid #e2e8f0;">
+    </td></tr>
+  </table>`
+  }
+  return `
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+    <tr><td align="center">
+      <div style="display:inline-block;width:48px;height:48px;border-radius:10px;
+                  background:${stringToColor(name)};text-align:center;line-height:48px;
+                  font-size:22px;font-weight:700;color:#ffffff;">
+        ${letter}
+      </div>
+    </td></tr>
+  </table>`
+}
+
 /**
  * Outer email wrapper — table-based layout for broad email client support.
  * Light slate background, centered white card, brand header, footer.
@@ -91,10 +174,15 @@ function ctaButton(label: string, url: string): string {
 
 function subRow(name: string, price: number, billingCycle: string, dateLabel?: string): string {
   const cycle = billingCycle === 'yearly' ? 'yr' : 'mo'
+  const logoUrl = getSubscriptionLogoUrl(name)
+  const letter = name.charAt(0).toUpperCase()
+  const icon = logoUrl
+    ? `<img src="${logoUrl}" width="20" height="20" alt="" style="border-radius:4px;vertical-align:middle;margin-right:8px;border:1px solid #f1f5f9;">`
+    : `<span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:${stringToColor(name)};text-align:center;line-height:20px;font-size:10px;font-weight:700;color:#fff;vertical-align:middle;margin-right:8px;">${letter}</span>`
   return `
   <tr>
     <td style="padding:11px 0;border-bottom:1px solid #f1f5f9;vertical-align:middle;">
-      <span style="font-size:14px;color:#1e293b;font-weight:500;">${name}</span>
+      ${icon}<span style="font-size:14px;color:#1e293b;font-weight:500;">${name}</span>
       ${dateLabel ? `<span style="font-size:12px;color:#94a3b8;margin-left:8px;">${dateLabel}</span>` : ''}
     </td>
     <td style="padding:11px 0;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;vertical-align:middle;">
@@ -449,6 +537,7 @@ export async function sendSubscriptionAddedEmail(
   const cycle = sub.billingCycle === 'yearly' ? 'year' : 'month'
   const id = uniqueId()
   const html = wrap(`
+    ${subscriptionLogo(sub.name)}
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;text-align:center;">Subscription added</h1>
     <p style="margin:0 0 28px;font-size:14px;color:#64748b;text-align:center;">
       <strong style="color:#1e293b;">${sub.name}</strong> has been added to your SubTracker.
@@ -479,6 +568,7 @@ export async function sendSubscriptionRemovedEmail(
 ) {
   const id = uniqueId()
   const html = wrap(`
+    ${subscriptionLogo(sub.name)}
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;text-align:center;">Subscription removed</h1>
     <p style="margin:0 0 28px;font-size:14px;color:#64748b;text-align:center;">
       <strong style="color:#1e293b;">${sub.name}</strong> has been removed from your SubTracker
