@@ -25,7 +25,13 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { name, price, billingCycle, category, nextBilling, currency, displayPrice } = await req.json()
+    const { name, price, billingCycle, category, nextBilling, currency, displayPrice, logoUrl: rawLogoUrl } = await req.json()
+
+    // Always resolve to a non-empty string — never pass null/undefined to Prisma.
+    // Covers: custom service (no logo sent), failed lookup, old client payloads.
+    const logoUrl: string = rawLogoUrl || '/logos/subtracker.svg'
+
+    console.log('[POST /api/subscriptions] incoming:', { name, rawLogoUrl, resolvedLogoUrl: logoUrl })
 
     if (!name || !price || !billingCycle || !nextBilling) {
       return NextResponse.json(
@@ -42,6 +48,7 @@ export async function POST(req: Request) {
         category: category || null,
         nextBilling: new Date(nextBilling),
         userId: session.user.id,
+        logoUrl,
       },
     })
 
@@ -60,7 +67,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(subscription, { status: 201 })
-  } catch {
+  } catch (err) {
+    console.error('[POST /api/subscriptions] Prisma create failed:', err)
     return NextResponse.json(
       { error: 'Failed to create subscription' },
       { status: 500 }
