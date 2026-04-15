@@ -189,6 +189,7 @@ export async function GET(req: Request) {
 
       const alertSubs: AlertSub[] = subs.map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
       console.log('[DEBUG] SENDING EMAIL (today):', userId, email)
+      console.log('[TEST] Sending email to:', email)
       const { error } = await sendTodayAlert(email, alertSubs)
       if (error) {
         console.error('Failed today alert:', error)
@@ -219,6 +220,7 @@ export async function GET(req: Request) {
 
       const alertSubs: AlertSub[] = subs.map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
       console.log('[DEBUG] SENDING EMAIL (tomorrow):', userId, email)
+      console.log('[TEST] Sending email to:', email)
       const { error } = await sendTomorrowAlert(email, alertSubs)
       if (error) {
         console.error('Failed tomorrow alert:', error)
@@ -305,6 +307,7 @@ export async function GET(req: Request) {
       }))
 
       console.log('[DEBUG] SENDING EMAIL (weekly):', userId, email)
+      console.log('[TEST] Sending email to:', email)
 
       const { error } = await sendWeeklySummaryEmail(email, {
         totalSubscriptions,
