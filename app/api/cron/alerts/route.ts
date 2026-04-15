@@ -184,7 +184,13 @@ export async function GET(req: Request) {
       if (error) {
         console.error('Failed today alert:', error)
       } else {
-        await prisma.alertLog.create({ data: { userId, type: 'today', localDate } })
+        console.log('[AlertLog] inserting today —', userId, localDate)
+        try {
+          await prisma.alertLog.create({ data: { userId, type: 'today', localDate } })
+          console.log('[AlertLog] insert OK — today', userId, localDate)
+        } catch (e) {
+          console.error('[AlertLog] insert FAILED — today', userId, localDate, e)
+        }
         sentToday++
       }
     }
@@ -203,7 +209,13 @@ export async function GET(req: Request) {
       if (error) {
         console.error('Failed tomorrow alert:', error)
       } else {
-        await prisma.alertLog.create({ data: { userId, type: 'tomorrow', localDate } })
+        console.log('[AlertLog] inserting tomorrow —', userId, localDate)
+        try {
+          await prisma.alertLog.create({ data: { userId, type: 'tomorrow', localDate } })
+          console.log('[AlertLog] insert OK — tomorrow', userId, localDate)
+        } catch (e) {
+          console.error('[AlertLog] insert FAILED — tomorrow', userId, localDate, e)
+        }
         sentTomorrow++
       }
     }
@@ -282,7 +294,13 @@ export async function GET(req: Request) {
       if (error) {
         console.error('Failed weekly summary:', error)
       } else {
-        await prisma.alertLog.create({ data: { userId, type: 'weekly', localDate } })
+        console.log('[AlertLog] inserting weekly —', userId, localDate)
+        try {
+          await prisma.alertLog.create({ data: { userId, type: 'weekly', localDate } })
+          console.log('[AlertLog] insert OK — weekly', userId, localDate)
+        } catch (e) {
+          console.error('[AlertLog] insert FAILED — weekly', userId, localDate, e)
+        }
         sentWeekly++
       }
     }
