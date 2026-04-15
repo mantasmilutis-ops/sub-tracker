@@ -44,3 +44,13 @@ model VerificationToken {
   expires DateTime
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model AlertLog {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // 'today' | 'tomorrow' | 'weekly'
+  localDate String   // YYYY-MM-DD in user's timezone
+  sentAt    DateTime @default(now())
+
+  @@unique([userId, type, localDate])
+}

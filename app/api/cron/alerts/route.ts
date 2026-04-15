@@ -3,23 +3,27 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Cron endpoint for subscription billing alerts.
  *
- * Secure with CRON_SECRET env var. Call it from any scheduler:
- *   GET /api/cron/alerts?type=daily    — today + tomorrow reminders
- *   GET /api/cron/alerts?type=weekly   — 7-day summary (run once/week)
+ * Run hourly via Vercel Cron (vercel.json). Each run checks which users have
+ * reached their local SEND_HOUR and sends only the alerts they haven't
+ * received yet today (daily) or this week on Monday (weekly).
  *
- * Vercel Cron example (vercel.json):
- *   { "crons": [
- *       { "path": "/api/cron/alerts?type=daily",  "schedule": "0 8 * * *"  },
- *       { "path": "/api/cron/alerts?type=weekly", "schedule": "0 8 * * 1"  }
- *   ]}
- *
- * Authorization header required: "Bearer <CRON_SECRET>"
+ * Secure with CRON_SECRET env var:
+ *   Authorization: Bearer <CRON_SECRET>
  * (If CRON_SECRET is not set the endpoint is open — fine for local dev only.)
+ *
+ * Query params:
+ *   GET /api/cron/alerts?type=daily    — today + tomorrow reminders
+ *   GET /api/cron/alerts?type=weekly   — 7-day summary (Mondays only)
  */
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendTodayAlert, sendTomorrowAlert, sendWeeklySummaryEmail, type AlertSub } from '@/lib/email'
+
+// ─── Config ───────────────────────────────────────────────────────────────────
+
+/** Local hour at which alerts are sent (24-hour clock, 0–23). */
+const SEND_HOUR = 9
 
 // ─── Timezone-aware date helpers ──────────────────────────────────────────────
 
@@ -32,6 +36,25 @@ function getLocalDateStr(timezone: string, offsetDays = 0): string {
   // Adding whole-day milliseconds is accurate enough for ±1 week offsets.
   const ms = Date.now() + offsetDays * 24 * 60 * 60 * 1000
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(ms)
+}
+
+/** Return the current local hour (0–23) for a given IANA timezone. */
+function getLocalHour(timezone: string): number {
+  return parseInt(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour: 'numeric',
+      hour12: false,
+    }).format(new Date()),
+    10,
+  )
+}
+
+/** Return the current local day-of-week (0=Sun … 6=Sat) for a given IANA timezone. */
+function getLocalDayOfWeek(timezone: string): number {
+  return new Date(
+    new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date()),
+  ).getDay()
 }
 
 /**
@@ -121,46 +144,68 @@ export async function GET(req: Request) {
     const [todayRaw, tomorrowRaw] = await Promise.all([
       prisma.subscription.findMany({
         where: { nextBilling: utcDayRange(0) },
-        include: { user: { select: { email: true } } },
+        include: { user: { select: { email: true, timezone: true } } },
       }),
       prisma.subscription.findMany({
         where: { nextBilling: utcDayRange(1) },
-        include: { user: { select: { email: true } } },
+        include: { user: { select: { email: true, timezone: true } } },
       }),
     ])
 
-    // Group each result set by userId → { email, subs[] }
-    const todayByUser = new Map<string, { email: string; subs: typeof todayRaw }>()
+    // Group each result set by userId → { email, timezone, subs[] }
+    const todayByUser = new Map<string, { email: string; timezone: string; subs: typeof todayRaw }>()
     for (const sub of todayRaw) {
       if (!todayByUser.has(sub.userId))
-        todayByUser.set(sub.userId, { email: sub.user.email, subs: [] })
+        todayByUser.set(sub.userId, { email: sub.user.email, timezone: sub.user.timezone ?? 'UTC', subs: [] })
       todayByUser.get(sub.userId)!.subs.push(sub)
     }
 
-    const tomorrowByUser = new Map<string, { email: string; subs: typeof tomorrowRaw }>()
+    const tomorrowByUser = new Map<string, { email: string; timezone: string; subs: typeof tomorrowRaw }>()
     for (const sub of tomorrowRaw) {
       if (!tomorrowByUser.has(sub.userId))
-        tomorrowByUser.set(sub.userId, { email: sub.user.email, subs: [] })
+        tomorrowByUser.set(sub.userId, { email: sub.user.email, timezone: sub.user.timezone ?? 'UTC', subs: [] })
       tomorrowByUser.get(sub.userId)!.subs.push(sub)
     }
 
     let sentToday = 0
     let sentTomorrow = 0
 
-    for (const { email, subs } of Array.from(todayByUser.values())) {
+    for (const [userId, { email, timezone, subs }] of Array.from(todayByUser)) {
+      if (getLocalHour(timezone) !== SEND_HOUR) continue
+      const localDate = getLocalDateStr(timezone)
+      const alreadySent = await prisma.alertLog.findUnique({
+        where: { userId_type_localDate: { userId, type: 'today', localDate } },
+      })
+      if (alreadySent) continue
+
       const alertSubs: AlertSub[] = subs.map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
       console.log('Sending TODAY alert to', email, '—', alertSubs.length, 'sub(s)')
       const { error } = await sendTodayAlert(email, alertSubs)
-      if (error) console.error('Failed today alert:', error)
-      else sentToday++
+      if (error) {
+        console.error('Failed today alert:', error)
+      } else {
+        await prisma.alertLog.create({ data: { userId, type: 'today', localDate } })
+        sentToday++
+      }
     }
 
-    for (const { email, subs } of Array.from(tomorrowByUser.values())) {
+    for (const [userId, { email, timezone, subs }] of Array.from(tomorrowByUser)) {
+      if (getLocalHour(timezone) !== SEND_HOUR) continue
+      const localDate = getLocalDateStr(timezone)
+      const alreadySent = await prisma.alertLog.findUnique({
+        where: { userId_type_localDate: { userId, type: 'tomorrow', localDate } },
+      })
+      if (alreadySent) continue
+
       const alertSubs: AlertSub[] = subs.map(s => ({ name: s.name, price: s.price, billingCycle: s.billingCycle, nextBilling: s.nextBilling }))
       console.log('Sending TOMORROW alert to', email, '—', alertSubs.length, 'sub(s)')
       const { error } = await sendTomorrowAlert(email, alertSubs)
-      if (error) console.error('Failed tomorrow alert:', error)
-      else sentTomorrow++
+      if (error) {
+        console.error('Failed tomorrow alert:', error)
+      } else {
+        await prisma.alertLog.create({ data: { userId, type: 'tomorrow', localDate } })
+        sentTomorrow++
+      }
     }
 
     return NextResponse.json({
@@ -191,20 +236,28 @@ export async function GET(req: Request) {
     const weekSubsRaw = await prisma.subscription.findMany({
       where: { nextBilling: { gte: now, lte: in7Days } },
       orderBy: { nextBilling: 'asc' },
-      include: { user: { select: { email: true } } },
+      include: { user: { select: { email: true, timezone: true } } },
     })
 
     // Group this week's subs by user
-    const weekByUser = new Map<string, { email: string; subs: typeof weekSubsRaw }>()
+    const weekByUser = new Map<string, { email: string; timezone: string; subs: typeof weekSubsRaw }>()
     for (const sub of weekSubsRaw) {
       if (!weekByUser.has(sub.userId))
-        weekByUser.set(sub.userId, { email: sub.user.email, subs: [] })
+        weekByUser.set(sub.userId, { email: sub.user.email, timezone: sub.user.timezone ?? 'UTC', subs: [] })
       weekByUser.get(sub.userId)!.subs.push(sub)
     }
 
     let sentWeekly = 0
 
-    for (const [userId, { email, subs }] of Array.from(weekByUser)) {
+    for (const [userId, { email, timezone, subs }] of Array.from(weekByUser)) {
+      if (getLocalHour(timezone) !== SEND_HOUR) continue
+      if (getLocalDayOfWeek(timezone) !== 1) continue // Monday only
+      const localDate = getLocalDateStr(timezone)
+      const alreadySent = await prisma.alertLog.findUnique({
+        where: { userId_type_localDate: { userId, type: 'weekly', localDate } },
+      })
+      if (alreadySent) continue
+
       const [totalSubscriptions, upcomingCount] = await Promise.all([
         prisma.subscription.count({ where: { userId } }),
         prisma.subscription.count({ where: { userId, nextBilling: { gte: in8Days, lte: in30Days } } }),
@@ -226,8 +279,12 @@ export async function GET(req: Request) {
         upcomingSubs,
       })
 
-      if (error) console.error('Failed weekly summary:', error)
-      else sentWeekly++
+      if (error) {
+        console.error('Failed weekly summary:', error)
+      } else {
+        await prisma.alertLog.create({ data: { userId, type: 'weekly', localDate } })
+        sentWeekly++
+      }
     }
 
     return NextResponse.json({
