@@ -26,6 +26,7 @@ model Subscription {
   billingCycle String
   category     String?
   nextBilling  DateTime
+  logoUrl      String   @default("/logos/subtracker.svg")
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
