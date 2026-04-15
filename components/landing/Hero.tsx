@@ -14,6 +14,11 @@ export default function Hero() {
       />
 
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
+        {/* TEST DEPLOY BADGE */}
+        <div className="inline-flex items-center gap-2 bg-red-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-full mb-4">
+          TEST DEPLOY ACTIVE
+        </div>
+
         {/* Badge */}
         <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold px-3.5 py-1.5 rounded-full mb-8">
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block" />
@@ -22,12 +27,12 @@ export default function Hero() {
 
         {/* Headline */}
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 leading-tight tracking-tight mb-6">
-          Stop losing money to{' '}
+          DEPLOY TEST — Stop losing money to{' '}
           <span
             className="bg-clip-text text-transparent"
             style={{ backgroundImage: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}
           >
-            forgotten subscriptions!!!!! 🚀🚀
+            forgotten subscriptions!!!!! 🚀🚀🚀
           </span>
         </h1>
 
@@ -42,7 +47,7 @@ export default function Hero() {
             href="/register"
             className="btn-primary text-base px-6 py-3 w-full sm:w-auto shadow-lg shadow-indigo-100"
           >
-            Start tracking free
+            DEPLOY TEST BUTTON
           </Link>
           <Link
             href="/login"
