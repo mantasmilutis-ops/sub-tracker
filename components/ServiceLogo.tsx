@@ -3,6 +3,56 @@
 import { useState, useEffect } from 'react'
 import { getServiceDomain, lookupService } from '@/lib/services'
 
+// ─── Direct-URL logo with error fallback ─────────────────────────────────────
+// Used when the service catalog provides an explicit logoUrl.
+// Owns its own errored state so a broken image never shows.
+function DirectLogo({
+  src,
+  name,
+  size,
+  className,
+  fallbackClassName,
+}: {
+  src: string
+  name: string
+  size: number
+  className: string
+  fallbackClassName: string
+}) {
+  const [errored, setErrored] = useState(false)
+  const initial = name.charAt(0).toUpperCase() || '?'
+  const imgSize = Math.round(size * 0.72)
+
+  if (errored) {
+    return (
+      <div
+        className={`flex items-center justify-center rounded-xl text-sm font-bold flex-shrink-0 bg-slate-100 text-slate-500 ${fallbackClassName} ${className}`}
+        style={{ width: size, height: size }}
+      >
+        {initial}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`flex items-center justify-center rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0 ${className}`}
+      style={{ width: size, height: size }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={`${name} logo`}
+        width={imgSize}
+        height={imgSize}
+        onError={() => setErrored(true)}
+        className="object-contain"
+        style={{ width: imgSize, height: imgSize }}
+      />
+    </div>
+  )
+}
+
 type Tier = 'clearbit' | 'google' | 'letter'
 
 // ─── Logo tier cache (localStorage) ──────────────────────────────────────────
@@ -61,16 +111,15 @@ export function ServiceLogo({ name, size = 40, className = '', fallbackClassName
   }
 
   if (catalogEntry?.logoUrl && catalogEntry.logoUrl !== '__app__') {
-    // Direct image URL — skip tier system, use it straight away
-    const imgSize = Math.round(size * 0.72)
+    // Direct image URL — delegate to DirectLogo which owns error state
     return (
-      <div
-        className={`flex items-center justify-center rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0 ${className}`}
-        style={{ width: size, height: size }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={catalogEntry.logoUrl} alt={`${normalizedName} logo`} width={imgSize} height={imgSize} className="object-contain" style={{ width: imgSize, height: imgSize }} />
-      </div>
+      <DirectLogo
+        src={catalogEntry.logoUrl}
+        name={normalizedName}
+        size={size}
+        className={className}
+        fallbackClassName={fallbackClassName}
+      />
     )
   }
 
@@ -190,9 +239,21 @@ export function ServiceLogo({ name, size = 40, className = '', fallbackClassName
 
   return (
     <div
-      className={`flex items-center justify-center rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0 ${className}`}
+      className={`relative flex items-center justify-center rounded-xl overflow-hidden bg-white border border-slate-100 flex-shrink-0 ${className}`}
       style={{ width: size, height: size }}
     >
+      {/*
+        Silent letter fallback rendered behind the img at z-index 0.
+        If the img never renders (broken, slow, blocked) the letter shows
+        through instead of a broken-image icon — works even if onError
+        doesn't fire (a known quirk in some mobile Chrome builds).
+      */}
+      <div
+        className="absolute inset-0 flex items-center justify-center text-sm font-bold bg-slate-100 text-slate-500"
+        aria-hidden="true"
+      >
+        {initial}
+      </div>
       {/*
         key={logoUrl}: forces React to unmount and remount a fresh <img> DOM
         node when the URL changes (clearbit → google). Without this, some
@@ -208,8 +269,8 @@ export function ServiceLogo({ name, size = 40, className = '', fallbackClassName
         height={imgSize}
         onLoad={handleLoad}
         onError={handleError}
-        className="object-contain"
-        style={{ width: imgSize, height: imgSize }}
+        className="object-contain relative"
+        style={{ width: imgSize, height: imgSize, zIndex: 1 }}
       />
     </div>
   )
