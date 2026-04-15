@@ -18,7 +18,7 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { sendTodayAlert, sendTomorrowAlert, sendWeeklySummaryEmail, type AlertSub } from '@/lib/email'
+import { sendTodayAlert, sendTomorrowAlert, sendWeeklySummaryEmail, sleep, type AlertSub } from '@/lib/email'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -157,6 +157,7 @@ export async function GET(req: Request) {
           console.error('[AlertLog] insert FAILED — today', userId, localDate, e)
         }
       }
+      await sleep(100 + Math.random() * 200)
     }
 
     for (const [userId, { email, timezone, subs }] of Array.from(tomorrowByUser)) {
@@ -178,6 +179,7 @@ export async function GET(req: Request) {
           console.error('[AlertLog] insert FAILED — tomorrow', userId, localDate, e)
         }
       }
+      await sleep(100 + Math.random() * 200)
     }
 
     return NextResponse.json({
@@ -257,6 +259,7 @@ export async function GET(req: Request) {
           console.error('[AlertLog] insert FAILED — weekly', userId, localDate, e)
         }
       }
+      await sleep(100 + Math.random() * 200)
     }
 
     return NextResponse.json({

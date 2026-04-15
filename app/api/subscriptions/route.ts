@@ -31,7 +31,8 @@ export async function POST(req: Request) {
     // Covers: custom service (no logo sent), failed lookup, old client payloads.
     const logoUrl: string = rawLogoUrl || '/logos/subtracker.svg'
 
-    console.log('[add] started —', name, '| logoUrl:', logoUrl)
+    const t0 = Date.now()
+    console.log(`[add] t=0ms — request start — name="${name}"`)
 
     if (!name || !price || !billingCycle || !nextBilling) {
       return NextResponse.json(
@@ -51,24 +52,29 @@ export async function POST(req: Request) {
         logoUrl,
       },
     })
-    console.log('[add] DB write success — id:', subscription.id)
+    console.log(`[add] t=${Date.now() - t0}ms — DB write success — id:${subscription.id}`)
 
     const userEmail = session.user.email
     if (userEmail) {
-      console.log('[add] email send started — to:', userEmail)
+      console.log(`[add] t=${Date.now() - t0}ms — email send start — to:${userEmail}`)
       try {
-        await sendSubscriptionAddedEmail(userEmail, {
+        const { messageId, error } = await sendSubscriptionAddedEmail(userEmail, {
           name: subscription.name,
           price: typeof displayPrice === 'number' ? displayPrice : subscription.price,
           billingCycle: subscription.billingCycle,
           currency: currency ?? 'EUR',
         })
-        console.log('[add] email send success')
+        if (error) {
+          console.error(`[add] t=${Date.now() - t0}ms — email send response — error:${error}`)
+        } else {
+          console.log(`[add] t=${Date.now() - t0}ms — email send response — messageId:${messageId}`)
+        }
       } catch (err) {
-        console.error('[add] email send FAILED:', err)
+        console.error(`[add] t=${Date.now() - t0}ms — email send FAILED:`, err)
       }
     }
 
+    console.log(`[add] t=${Date.now() - t0}ms — returning 201`)
     return NextResponse.json(subscription, { status: 201 })
   } catch (err) {
     console.error('[add] unhandled error:', err)

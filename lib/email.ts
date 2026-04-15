@@ -7,18 +7,21 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY)
 }
 
+/** Small delay — used between batch sends to avoid burst queueing. */
+export const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
+
 export async function sendEmail(
   to: string,
   subject: string,
   html: string,
-): Promise<{ error?: string }> {
-  const { error } = await getResend().emails.send({
+): Promise<{ error?: string; messageId?: string }> {
+  const { data, error } = await getResend().emails.send({
     from: process.env.EMAIL_FROM!,
     to,
     subject,
     html,
   })
-  return error ? { error: error.message } : {}
+  return error ? { error: error.message } : { messageId: data?.id }
 }
 
 // ─── Template primitives ──────────────────────────────────────────────────────
@@ -443,7 +446,10 @@ export async function sendVerificationEmail(to: string, token: string) {
 // ─── Subscription transactional emails ───────────────────────────────────────
 
 function uniqueId(): string {
-  return '#' + Math.random().toString(36).slice(2, 7).toUpperCase()
+  // Timestamp component prevents Gmail from grouping emails sent in the same minute
+  const ts = Date.now().toString(36).slice(-4).toUpperCase()
+  const rand = Math.random().toString(36).slice(2, 5).toUpperCase()
+  return `#${ts}${rand}`
 }
 
 export async function sendSubscriptionAddedEmail(

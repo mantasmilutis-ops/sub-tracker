@@ -26,22 +26,28 @@ export async function DELETE(
   }
 
   try {
-    console.log('[remove] started — id:', params.id)
+    const t0 = Date.now()
+    console.log(`[remove] t=0ms — request start — name="${subscription.name}"`)
 
     await prisma.subscription.delete({ where: { id: params.id } })
-    console.log('[remove] DB delete success —', subscription.name)
+    console.log(`[remove] t=${Date.now() - t0}ms — DB delete success`)
 
     const userEmail = session.user.email
     if (userEmail) {
-      console.log('[remove] email send started — to:', userEmail)
+      console.log(`[remove] t=${Date.now() - t0}ms — email send start — to:${userEmail}`)
       try {
-        await sendSubscriptionRemovedEmail(userEmail, { name: subscription.name })
-        console.log('[remove] email send success')
+        const { messageId, error } = await sendSubscriptionRemovedEmail(userEmail, { name: subscription.name })
+        if (error) {
+          console.error(`[remove] t=${Date.now() - t0}ms — email send response — error:${error}`)
+        } else {
+          console.log(`[remove] t=${Date.now() - t0}ms — email send response — messageId:${messageId}`)
+        }
       } catch (err) {
-        console.error('[remove] email send FAILED:', err)
+        console.error(`[remove] t=${Date.now() - t0}ms — email send FAILED:`, err)
       }
     }
 
+    console.log(`[remove] t=${Date.now() - t0}ms — returning 200`)
     return NextResponse.json({ message: 'Deleted' })
   } catch (err) {
     console.error('[remove] unhandled error:', err)
