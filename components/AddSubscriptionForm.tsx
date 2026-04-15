@@ -160,6 +160,8 @@ export function AddSubscriptionForm({ onAdded, onCancel }: Props) {
         name: name.trim(),
         // Convert from selected currency back to EUR (DB base currency)
         price: parseFloat(price) / RATES[currency],
+        displayPrice: parseFloat(price),
+        currency,
         billingCycle,
         category: category || null,
         nextBilling,

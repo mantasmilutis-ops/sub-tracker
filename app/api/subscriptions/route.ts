@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { name, price, billingCycle, category, nextBilling } = await req.json()
+    const { name, price, billingCycle, category, nextBilling, currency, displayPrice } = await req.json()
 
     if (!name || !price || !billingCycle || !nextBilling) {
       return NextResponse.json(
@@ -50,8 +50,9 @@ export async function POST(req: Request) {
       try {
         await sendSubscriptionAddedEmail(userEmail, {
           name: subscription.name,
-          price: subscription.price,
+          price: typeof displayPrice === 'number' ? displayPrice : subscription.price,
           billingCycle: subscription.billingCycle,
+          currency: currency ?? 'EUR',
         })
       } catch (err) {
         console.error('sendSubscriptionAddedEmail failed:', err)

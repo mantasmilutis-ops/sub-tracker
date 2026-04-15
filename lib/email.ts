@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { SYMBOLS, type Currency } from '@/lib/currency'
 
 // ─── Transport ────────────────────────────────────────────────────────────────
 
@@ -447,9 +448,10 @@ function uniqueId(): string {
 
 export async function sendSubscriptionAddedEmail(
   to: string,
-  sub: { name: string; price: number; billingCycle: string },
+  sub: { name: string; price: number; billingCycle: string; currency?: Currency },
 ) {
   const cycle = sub.billingCycle === 'yearly' ? 'year' : 'month'
+  const symbol = sub.currency ? SYMBOLS[sub.currency] : '€'
   const id = uniqueId()
   const html = wrap(`
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;text-align:center;">Subscription added</h1>
@@ -463,7 +465,7 @@ export async function sendSubscriptionAddedEmail(
       </tr>
       <tr>
         <td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:500;">Price</td>
-        <td style="padding:12px 16px;font-size:13px;color:#0f172a;font-weight:600;text-align:right;">€${sub.price.toFixed(2)} / ${cycle}</td>
+        <td style="padding:12px 16px;font-size:13px;color:#0f172a;font-weight:600;text-align:right;">${symbol}${sub.price.toFixed(2)} / ${cycle}</td>
       </tr>
       <tr style="background:#f8fafc;">
         <td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:500;">Billing cycle</td>
