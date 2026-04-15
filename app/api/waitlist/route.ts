@@ -17,15 +17,19 @@ export async function POST(req: Request) {
   }
 
   await prisma.waitlistEntry.create({ data: { email } })
+  console.log('[waitlist] DB insert success:', email)
 
-  // Best-effort confirmation email — don't fail the request if it errors
-  console.log('sending waitlist confirmation to', email)
-  sendWaitlistConfirmation(email)
-    .then(({ error }) => {
-      if (error) console.error('waitlist email failed for', email, error)
-      else console.log('waitlist email sent to', email)
-    })
-    .catch((err) => console.error('waitlist email threw for', email, err))
+  console.log('[waitlist] sending confirmation email to', email)
+  try {
+    const { error } = await sendWaitlistConfirmation(email)
+    if (error) {
+      console.error('[waitlist] email send failed:', email, error)
+    } else {
+      console.log('[waitlist] email sent successfully to', email)
+    }
+  } catch (err) {
+    console.error('[waitlist] email threw:', email, err)
+  }
 
   return NextResponse.json({ ok: true, message: "You're on the waitlist 🚀" })
 }
