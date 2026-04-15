@@ -438,11 +438,16 @@ export async function sendVerificationEmail(to: string, token: string) {
 
 // ─── Subscription transactional emails ───────────────────────────────────────
 
+function uniqueId(): string {
+  return '#' + Math.random().toString(36).slice(2, 7).toUpperCase()
+}
+
 export async function sendSubscriptionAddedEmail(
   to: string,
   sub: { name: string; price: number; billingCycle: string },
 ) {
   const cycle = sub.billingCycle === 'yearly' ? 'year' : 'month'
+  const id = uniqueId()
   const html = wrap(`
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;text-align:center;">Subscription added</h1>
     <p style="margin:0 0 28px;font-size:14px;color:#64748b;text-align:center;">
@@ -463,14 +468,16 @@ export async function sendSubscriptionAddedEmail(
       </tr>
     </table>
     ${ctaButton('View Dashboard', dashboardUrl())}
+    <p style="margin:16px 0 0;font-size:11px;color:#e2e8f0;text-align:center;">${id}</p>
   `)
-  return sendEmail(to, `"${sub.name}" added to SubTracker`, html)
+  return sendEmail(to, `"${sub.name}" added to SubTracker ${id}`, html)
 }
 
 export async function sendSubscriptionRemovedEmail(
   to: string,
   sub: { name: string },
 ) {
+  const id = uniqueId()
   const html = wrap(`
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;text-align:center;">Subscription removed</h1>
     <p style="margin:0 0 28px;font-size:14px;color:#64748b;text-align:center;">
@@ -478,6 +485,7 @@ export async function sendSubscriptionRemovedEmail(
       and will no longer be tracked.
     </p>
     ${ctaButton('View Dashboard', dashboardUrl())}
+    <p style="margin:16px 0 0;font-size:11px;color:#e2e8f0;text-align:center;">${id}</p>
   `)
-  return sendEmail(to, `"${sub.name}" removed from SubTracker`, html)
+  return sendEmail(to, `"${sub.name}" removed from SubTracker ${id}`, html)
 }
